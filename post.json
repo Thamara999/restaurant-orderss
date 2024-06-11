@@ -1,0 +1,7 @@
+{
+    "tableNumber": 5,
+    "items": [
+        {"name": "Pizza", "price": 10.00, "quantity": 2},
+        {"name": "Soda", "price": 2.50, "quantity": 3}
+    ]
+}

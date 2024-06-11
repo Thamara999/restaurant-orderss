@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos del Restaurante</title>
+    <link rel="stylesheet" href="/index.css"> 
+</head>
+<body>
+    <h1>Pedidos del Restaurante</h1>
+    <form id="orderForm">
+        <!-- Campo para ingresar el número de mesa -->
+        <label for="tableNumber">Número de Mesa:</label>
+        <input type="number" id="tableNumber" name="tableNumber" required>
+        
+        <!-- Campo para ingresar el nombre del artículo -->
+        <label for="itemName">Nombre del Artículo:</label>
+        <input type="text" id="itemName" name="itemName" required>
+        
+        <!-- Campo para ingresar el precio del artículo -->
+        <label for="itemPrice">Precio del Artículo:</label>
+        <input type="number" step="0.01" id="itemPrice" name="itemPrice" required>
+
+        <!-- Campo para ingresar la cantidad del artículo -->
+        <label for="itemQuantity">Cantidad del Artículo:</label>
+        <input type="number" id="itemQuantity" name="itemQuantity" required>
+
+        <!-- Botón para agregar el artículo a la lista de pedidos -->
+        <button type="button" id="addItem">Agregar artículo</button>
+        
+        <h2>Artículos del Pedido</h2>
+        <ul id="itemsList"></ul>
+        
+        <h3>Subtotal: $<span id="subtotal">0.00</span></h3>
+        <h3>Propina (10%): $<span id="tip">0.00</span></h3>
+        <h3>Total: $<span id="total">0.00</span></h3>
+
+        <!-- Botón para enviar el pedido -->
+        <button type="submit">Enviar pedido</button>
+    </form>
+     <!-- Div para mostrar la respuesta del servidor -->
+    <div id="response"></div>
+    <script>
+
+        // Array para almacenar los artículos del pedido
+        const items = [];
+        let subtotal = 0;
+
+        // Evento para manejar el clic en el botón de agregar artículo
+        document.getElementById('addItem').addEventListener('click', function() {
+            // Obtiene los valores de los campos de entrada
+            const itemName = document.getElementById('itemName').value;
+            const itemPrice = parseFloat(document.getElementById('itemPrice').value);
+            const itemQuantity = parseInt(document.getElementById('itemQuantity').value);
+
+            // Verifica que los campos no estén vacíos
+            if (itemName && itemPrice && itemQuantity) {
+                const item = {
+                    name: itemName,
+                    price: itemPrice,
+                    quantity: itemQuantity
+                };
+
+                // Agrega el artículo al array de artículos
+                items.push(item);
+                subtotal += itemPrice * itemQuantity;
+                const li = document.createElement('li');
+                li.textContent = `${itemQuantity}  ${itemName} $${itemPrice.toFixed(2)}`;
+                document.getElementById('itemsList').appendChild(li);
+
+                // Limpia los campos de entrada
+                document.getElementById('itemName').value = '';
+                document.getElementById('itemPrice').value = '';
+                document.getElementById('itemQuantity').value = '';
+
+                updateTotals();
+            }
+        });
+
+        // Evento para manejar el envío del formulario
+        document.getElementById('orderForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            // Obtiene el número de mesa
+            const tableNumber = document.getElementById('tableNumber').value;
+
+            // Verifica que al menos haya un artículo en el pedido
+            if (!items.length) {
+                document.getElementById('response').innerText = 'Por favor, añade al menos un pedido.';
+                return;
+            }
+
+            const total = calcularTotal();
+
+            // Envia el pedido al servidor usando fetch
+            fetch('/orders/new', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ tableNumber, items, subtotal, total })
+            })
+            .then(response => response.text())
+            .then(data => {
+                // Muestra la respuesta del servidor
+                document.getElementById('response').innerText = data;
+
+                // Limpia la lista de artículos y el array de artículos
+                document.getElementById('itemsList').innerHTML = '';
+                items.length = 0; // Limpiar el array de artículos
+                subtotal = 0;
+                updateTotals();
+            })
+            .catch(error => {
+                // Muestra un mensaje de error en caso de fallo
+                document.getElementById('response').innerText = 'Error: ' + error;
+            });
+        });
+
+        function updateTotals() {
+            // Calcula la propina
+            const prop = calcularProp();
+            // Calcula el total
+            const total = calcularTotal();
+
+            // Actualiza el subtotal, la propina y el total
+            document.getElementById('subtotal').innerText = subtotal.toFixed(2);
+            document.getElementById('tip').innerText = prop.toFixed(2);
+            document.getElementById('total').innerText = total.toFixed(2);
+        }
+
+        function calcularProp() {
+            // Calcula la propina como el 10% del subtotal
+            return subtotal * 0.10;
+        }
+
+        // Calcula el total sumando el subtotal y la propina
+        function calcularTotal() {
+            return subtotal + calcularProp();
+        }
+    </script>
+</body>
+</html>
